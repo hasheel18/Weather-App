@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weather App</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div class="card">
+    <div class="top-bar">
+      <h3 class="app-title">Weather App</h3>
+    </div>
+
+    <div class="search">
+      <input type="text" placeholder="Enter city name" spellcheck="false">
+      <button><img src="search_icon.png" alt="Search"></button>
+    </div>
+
+    <div class="error">
+      <p>Invalid city name. Please try again.</p>
+    </div>
+
+    <div class="weather">
+      <img src="Rain_icon.png" class="Weather-Icon">
+      <h1 class="temp"></h1>
+      <h2 class="city"></h2>
+      <p class="time"></p>
+      <p class="feels"></p>
+      <p class="range"></p>
+      <p class="advice"></p>
+      <div class="details">
+        <div class="col">
+          <img src="humidity_icon.png" alt="Humidity Icon">
+          <div>
+            <p class="humidity">60%</p>
+            <p>Humidity</p>
+          </div>
+        </div>
+        <div class="col">
+          <img src="wind_icon.png" alt="Wind Icon">
+          <div>
+            <p class="wind">15 km/h</p>
+            <p>Wind Speed</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const apiKey = "7539235f9b251bcc6a6abe68425e949b";
+    const apiUrl = "https://api.openweathermap.org/data/2.5/weather?units=metric&q=";
+
+    const searchBox = document.querySelector(".search input");
+    const searchBtn = document.querySelector(".search button");
+    const weatherIcon = document.querySelector(".Weather-Icon");
+
+    function updateBackground(data) {
+      const card = document.querySelector(".card");
+      const weatherMain = data.weather[0].main;
+
+      const utcSeconds = data.dt + data.timezone;
+      const localDate = new Date(utcSeconds * 1000);
+      const hour = localDate.getUTCHours();
+
+      let gradient;
+      if (hour >= 6 && hour < 18) {
+        if (weatherMain === "Clear") {
+          gradient = "linear-gradient(200deg,#38bdf8,#22c55e)";
+        } else if (weatherMain === "Rain" || weatherMain === "Drizzle") {
+          gradient = "linear-gradient(200deg,#0f172a,#1e293b)";
+        } else if (weatherMain === "Clouds") {
+          gradient = "linear-gradient(200deg,#64748b,#0f172a)";
+        } else {
+          gradient = "linear-gradient(200deg,#6366f1,#22c55e)";
+        }
+      } else {
+        gradient = "linear-gradient(200deg,#020617,#1e293b)";
+      }
+
+      card.style.background = gradient;
+    }
+
+    async function checkWeather(city) {
+      const response = await fetch(apiUrl + city + `&appid=${apiKey}`);
+
+      if (response.status == 404) {
+        document.querySelector(".error").style.display = "block";
+        document.querySelector(".weather").style.display = "none";
+      } else {
+        const data = await response.json();
+
+        updateBackground(data);
+
+        const utcSeconds = data.dt + data.timezone;
+        const cityDate = new Date(utcSeconds * 1000);
+        const hours = cityDate.getUTCHours().toString().padStart(2, "0");
+        const minutes = cityDate.getUTCMinutes().toString().padStart(2, "0");
+        const day = cityDate.toLocaleDateString(undefined, {
+          weekday: "short",
+          month: "short",
+          day: "numeric"
+        });
+
+        document.querySelector(".time").innerHTML = `${day}, ${hours}:${minutes}`;
+
+        document.querySelector(".city").innerHTML = data.name;
+        document.querySelector(".temp").innerHTML =
+          Math.round(data.main.temp) + "°C";
+        document.querySelector(".feels").innerHTML =
+          "Feels like: " + Math.round(data.main.feels_like) + "°C";
+        document.querySelector(".range").innerHTML =
+          "Min " + Math.round(data.main.temp_min) + "°C - Max " +
+          Math.round(data.main.temp_max) + "°C";
+        document.querySelector(".humidity").innerHTML =
+          data.main.humidity + "%";
+        document.querySelector(".wind").innerHTML =
+          data.wind.speed + " km/h";
+
+        const t = Math.round(data.main.temp);
+        const main = data.weather[0].main;
+        const hum = data.main.humidity;
+
+        document.querySelector(".advice").innerHTML = buildAdvice(t, main, hum);
+
+        if (data.weather[0].main == "Clouds") {
+          weatherIcon.src = "cloud_icon.png";
+        } else if (data.weather[0].main == "Clear") {
+          weatherIcon.src = "clear_icon.png";
+        } else if (data.weather[0].main == "Rain") {
+          weatherIcon.src = "rain_icon.png";
+        } else if (data.weather[0].main == "Drizzle") {
+          weatherIcon.src = "drizzle_icon.png";
+        } else if (data.weather[0].main == "Mist") {
+          weatherIcon.src = "mist_icon.png";
+        }
+
+        document.querySelector(".weather").style.display = "block";
+        document.querySelector(".error").style.display = "none";
+
+        const weatherDiv = document.querySelector(".weather");
+        weatherDiv.classList.remove("show");
+        void weatherDiv.offsetWidth;
+        weatherDiv.classList.add("show");
+      }
+    }
+
+    function buildAdvice(t, main, hum) {
+      if (main === "Rain" || main === "Drizzle") return "Take an umbrella today.";
+      if (main === "Snow") return "Very cold, wear warm clothes.";
+      if (main === "Clear" && t > 30) return "Very hot, stay hydrated.";
+      if (main === "Clear" && t < 20) return "Cool and clear, good for a walk.";
+      if (hum > 80) return "Humid, it may feel warmer.";
+      return "Weather looks normal. Have a nice day.";
+    }
+
+    searchBtn.addEventListener("click", () => {
+      checkWeather(searchBox.value);
+    });
+
+    searchBox.addEventListener("keyup", (event) => {
+      if (event.key === "Enter") {
+        checkWeather(searchBox.value);
+      }
+    });
+  </script>
+</body>
+
+</html>
